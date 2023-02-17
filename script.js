@@ -37,9 +37,13 @@ function getRandomDirection() {
   return direction;
 }
 
+function dotProduct(vec1, vec2) {
+  return vec1.x * vec2.x + vec1.y * vec2.y; //could use math.floor to reduce calculations
+}
+
 class Ball {
   constructor(radius) {
-    this.speed = 5;
+    this.speed = 3;
     this.radius = radius;
     this.color = getRandomColor();
 
@@ -112,6 +116,7 @@ class BallPit {
     for (let i = 0; i < pitInit.numberBalls; i++) {
       this.collisionMatrix[i] = new Array(pitInit.numberBalls).fill(false);
     }
+    // gotta make sure they are spread out when initiated
   }
   addBall() {
     this.balls.push(new Ball(this.ballRadius));
@@ -131,7 +136,6 @@ class BallPit {
         (ballOne.position.y + ballOne.velocity.y)) **
         2;
     const minimumDistanceSquared = (ballOne.radius + ballTwo.radius) ** 2;
-    // console.log(distanceSquared < minimumDistanceSquared);
     return distanceSquared < minimumDistanceSquared;
   }
 
@@ -146,15 +150,50 @@ class BallPit {
       }
     }
   }
+  // basics elastic collisions with vectors
   changeDirections(ballOne, ballTwo) {
     ballOne.color = "red";
-    ballTwo.color = "red";
+    ballTwo.color = "blue";
+    const distance = Math.sqrt(
+      (ballTwo.position.x - ballOne.position.x) ** 2 +
+        (ballTwo.position.y - ballOne.position.y) ** 2
+    );
+    const distanceVector = {
+      x: (ballTwo.position.x - ballOne.position.x) / distance,
+      y: (ballTwo.position.y - ballOne.position.y) / distance,
+    };
+
+    const ballOneNewDirection = {
+      x:
+        ballOne.velocity.x -
+        2 * dotProduct(ballOne.velocity, distanceVector) * distanceVector.x,
+      y:
+        ballOne.velocity.y -
+        2 * dotProduct(ballOne.velocity, distanceVector) * distanceVector.y,
+    };
+    const ballTwoNewDirection = {
+      x:
+        ballTwo.velocity.x -
+        2 * dotProduct(ballTwo.velocity, distanceVector) * distanceVector.x,
+      y:
+        ballTwo.velocity.y -
+        2 * dotProduct(ballTwo.velocity, distanceVector) * distanceVector.y,
+    };
+    console.log(ballOneNewDirection.x ** 2 + ballOneNewDirection.y ** 2);
+    console.log(ballTwoNewDirection);
+    ballOne.velocity.x = ballOneNewDirection.x;
+    ballOne.velocity.y = ballOneNewDirection.y;
+    ballTwo.velocity.x = ballTwoNewDirection.x;
+    ballTwo.velocity.y = ballTwoNewDirection.y;
   }
+
   updateCollisions() {
     for (let i = 0; i < this.balls.length; i++) {
       for (let j = i + 1; j < this.balls.length; j++) {
         if (this.collisionMatrix[i][j]) {
           this.changeDirections(this.balls[i], this.balls[j]);
+          this.collisionMatrix[i][j] = false;
+          this.collisionMatrix[j][i] = false;
         }
       }
     }
