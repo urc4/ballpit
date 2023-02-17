@@ -108,6 +108,10 @@ class BallPit {
     for (let i = 0; i < pitInit.numberBalls; i++) {
       this.balls.push(new Ball(this.ballRadius));
     }
+    this.collisionMatrix = [];
+    for (let i = 0; i < pitInit.numberBalls; i++) {
+      this.collisionMatrix[i] = new Array(pitInit.numberBalls).fill(false);
+    }
   }
   addBall() {
     this.balls.push(new Ball(this.ballRadius));
@@ -115,17 +119,58 @@ class BallPit {
   removeBall() {
     this.balls.pop();
   }
-  draw() {}
+
+  checkIntersection(ballOne, ballTwo) {
+    const distanceSquared =
+      (ballTwo.position.x +
+        ballTwo.velocity.x -
+        (ballOne.position.x + ballOne.velocity.x)) **
+        2 +
+      (ballTwo.position.y +
+        ballTwo.velocity.y -
+        (ballOne.position.y + ballOne.velocity.y)) **
+        2;
+    const minimumDistanceSquared = (ballOne.radius + ballTwo.radius) ** 2;
+    // console.log(distanceSquared < minimumDistanceSquared);
+    return distanceSquared < minimumDistanceSquared;
+  }
+
+  updateCollisionMatrix() {
+    for (let i = 0; i < this.balls.length; i++) {
+      for (let j = i + 1; j < this.balls.length; j++) {
+        const ballOne = this.balls[i];
+        const ballTwo = this.balls[j];
+        const intersect = this.checkIntersection(ballOne, ballTwo);
+        this.collisionMatrix[i][j] = intersect;
+        this.collisionMatrix[j][j] = intersect;
+      }
+    }
+  }
+  changeDirections(ballOne, ballTwo) {
+    ballOne.color = "red";
+    ballTwo.color = "red";
+  }
+  updateCollisions() {
+    for (let i = 0; i < this.balls.length; i++) {
+      for (let j = i + 1; j < this.balls.length; j++) {
+        if (this.collisionMatrix[i][j]) {
+          this.changeDirections(this.balls[i], this.balls[j]);
+        }
+      }
+    }
+  }
   update() {
     for (const ball of this.balls) {
       ball.update();
     }
+    this.updateCollisionMatrix();
+    this.updateCollisions();
   }
 }
 // create balls
 const pitInit = {
   ballRadius: 20,
-  numberBalls: 10,
+  numberBalls: 5,
 };
 const ballPit = new BallPit(pitInit);
 // recursive callback function to update screen display
