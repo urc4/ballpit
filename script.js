@@ -72,6 +72,23 @@ class Ball {
 
   update() {
     this.draw();
+
+    const leftSide = this.position.x + this.velocity.x - this.radius;
+    const rightSide = this.position.x + this.velocity.x + this.radius;
+    const bottomSide = this.position.y + this.velocity.y + this.radius;
+    const topSide = this.position.y + this.velocity.y - this.radius;
+    // wall collision
+    if (leftSide < 0 || rightSide > WIDTH) {
+      // if (this.velocity.x < 0) this.velocity.x = --this.velocity.x * -1;
+      // else this.velocity.x = ++this.velocity.x * -1;
+      this.velocity.x = -this.velocity.x;
+    }
+    if (topSide < 0 || bottomSide > HEIGHT) {
+      // if (this.velocity.y < 0) this.velocity.y = --this.velocity.y * -1;
+      // else this.velocity.y = ++this.velocity.y * -1;
+      this.velocity.y = -this.velocity.y;
+    }
+
     this.position.x += this.velocity.x;
     this.position.y += this.velocity.y;
   }
