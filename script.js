@@ -44,9 +44,16 @@ class Ball {
     this.speed = 1;
     this.radius = radius;
     this.color = getRandomColor();
+
     this.position = getRandomPosition();
-    this.position.x = WIDTH - 1;
-    this.position.y = HEIGHT - 1;
+    if (this.position.x + 5 * this.radius > WIDTH)
+      this.position.x = WIDTH - 5 * this.radius;
+    if (this.position.x - 5 * this.radius < 0)
+      this.position.x = 5 * this.radius;
+    if (this.position.y + 5 * this.radius > HEIGHT)
+      this.position.y = HEIGHT - 5 * this.radius;
+    if (this.position.y - 5 * this.radius < 0)
+      this.position.y = 5 * this.radius;
 
     this.direction = getRandomDirection();
     this.velocity = {
@@ -56,27 +63,30 @@ class Ball {
   }
 
   draw() {
+    ctx.beginPath();
     ctx.fillStyle = this.color;
-    if (
-      this.position.x + this.radius > WIDTH &&
-      this.position.y + this.radius > HEIGHT
-    )
-      ctx.arc(
-        WIDTH - 5 * this.radius,
-        HEIGHT - 5 * this.radius,
-        20,
-        0,
-        2 * Math.PI
-      );
-    else if (this.position.x + 5 * this.radius > WIDTH)
-      ctx.arc(WIDTH - 5 * this.radius, this.position.y, 20, 0, 2 * Math.PI);
-    else if (this.position.y + 5 * this.radius > HEIGHT)
-      ctx.arc(this.position.x, HEIGHT - 5 * this.radius, 20, 0, 2 * Math.PI);
-    else ctx.arc(this.position.x, this.position.y, 20, 0, 2 * Math.PI);
-
+    ctx.arc(this.position.x, this.position.y, 20, 0, 2 * Math.PI);
     ctx.fill();
+    ctx.closePath();
+  }
+
+  update() {
+    this.draw();
+    this.position.x += this.velocity.x;
+    this.position.y += this.velocity.y;
   }
 }
 
+// create balls
 const ball = new Ball(20);
-ball.draw();
+
+// recursive callback function to update screen display
+function animate() {
+  //   ctx.fillStyle = "black";
+  //   ctx.fillRect(0, 0, WIDTH, HEIGHT);
+  ctx.clearRect(0, 0, WIDTH, HEIGHT);
+  ball.update();
+  requestAnimationFrame(animate);
+}
+
+animate();
