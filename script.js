@@ -16,9 +16,7 @@ const COLOR_PALETTE = [
 ];
 
 function getRandomColor() {
-  return COLOR_PALETTE[
-    Math.floor(Math.random() * (COLOR_PALETTE.length - 0.001))
-  ];
+  return COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)];
   //   its zero inclusive and one exclusive
 }
 
@@ -41,7 +39,7 @@ function getRandomDirection() {
 
 class Ball {
   constructor(radius) {
-    this.speed = 1;
+    this.speed = 5;
     this.radius = radius;
     this.color = getRandomColor();
 
@@ -54,6 +52,7 @@ class Ball {
       this.position.y = HEIGHT - 5 * this.radius;
     if (this.position.y - 5 * this.radius < 0)
       this.position.y = 5 * this.radius;
+    // also add to check if there are any oteher balls
 
     this.direction = getRandomDirection();
     this.velocity = {
@@ -65,14 +64,14 @@ class Ball {
   draw() {
     ctx.beginPath();
     ctx.fillStyle = this.color;
-    ctx.arc(this.position.x, this.position.y, 20, 0, 2 * Math.PI);
+    ctx.arc(this.position.x, this.position.y, this.radius, 0, 2 * Math.PI);
     ctx.fill();
     ctx.closePath();
   }
 
   update() {
     this.draw();
-
+    const color = this.color;
     const leftSide = this.position.x + this.velocity.x - this.radius;
     const rightSide = this.position.x + this.velocity.x + this.radius;
     const bottomSide = this.position.y + this.velocity.y + this.radius;
@@ -82,11 +81,19 @@ class Ball {
       // if (this.velocity.x < 0) this.velocity.x = --this.velocity.x * -1;
       // else this.velocity.x = ++this.velocity.x * -1;
       this.velocity.x = -this.velocity.x;
+      do {
+        this.color = getRandomColor();
+      } while (this.color === color);
+      // gotta make sure it does not get the same value
+      // make a return statement with ||
     }
     if (topSide < 0 || bottomSide > HEIGHT) {
       // if (this.velocity.y < 0) this.velocity.y = --this.velocity.y * -1;
       // else this.velocity.y = ++this.velocity.y * -1;
       this.velocity.y = -this.velocity.y;
+      do {
+        this.color = getRandomColor();
+      } while (this.color === color);
     }
 
     this.position.x += this.velocity.x;
@@ -94,15 +101,39 @@ class Ball {
   }
 }
 
+class BallPit {
+  constructor(pitInit) {
+    this.ballRadius = pitInit.ballRadius;
+    this.balls = [];
+    for (let i = 0; i < pitInit.numberBalls; i++) {
+      this.balls.push(new Ball(this.ballRadius));
+    }
+  }
+  addBall() {
+    this.balls.push(new Ball(this.ballRadius));
+  }
+  removeBall() {
+    this.balls.pop();
+  }
+  draw() {}
+  update() {
+    for (const ball of this.balls) {
+      ball.update();
+    }
+  }
+}
 // create balls
-const ball = new Ball(20);
-
+const pitInit = {
+  ballRadius: 20,
+  numberBalls: 10,
+};
+const ballPit = new BallPit(pitInit);
 // recursive callback function to update screen display
 function animate() {
   //   ctx.fillStyle = "black";
   //   ctx.fillRect(0, 0, WIDTH, HEIGHT);
   ctx.clearRect(0, 0, WIDTH, HEIGHT);
-  ball.update();
+  ballPit.update();
   requestAnimationFrame(animate);
 }
 
