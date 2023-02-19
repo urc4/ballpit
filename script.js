@@ -53,7 +53,7 @@ class Ball {
       this.position.y = 5 * this.radius;
 
     const direction = getRandomDirection();
-    this.speed = 3;
+    this.speed = 5;
     this.velocity = {
       x: direction.x * this.speed,
       y: direction.y * this.speed,
@@ -70,7 +70,6 @@ class Ball {
   }
 
   updateWallCollision() {
-    const color = this.color;
     // get rid of + this.velocity. ...?
     const leftSide = this.position.x + this.velocity.x - this.radius;
     const rightSide = this.position.x + this.velocity.x + this.radius;
@@ -85,18 +84,18 @@ class Ball {
       this.velocity.y = -this.velocity.y;
       this.changedDirection = true;
     }
-
-    if (this.changedDirection) {
-      do {
-        this.color = getRandomColor();
-      } while (this.color === color);
-    }
-    this.changedDirection = false;
   }
 
   update() {
     this.draw();
     this.updateWallCollision();
+    if (this.changedDirection) {
+      const color = this.color;
+      do {
+        this.color = getRandomColor();
+      } while (this.color === color);
+    }
+    this.changedDirection = false;
     this.position.x += this.velocity.x;
     this.position.y += this.velocity.y;
   }
@@ -169,71 +168,54 @@ class BallPit {
   }
   // basics elastic collisions with vectors gotta add weight here
   changeDirections(ball_1, ball_2) {
-    const colorOne = ball_1.color;
-    const colorTwo = ball_2.color;
-    do {
-      ball_1.color = getRandomColor();
-    } while (ball_1.color === colorOne);
-    do {
-      ball_2.color = getRandomColor();
-    } while (ball_2.color === colorTwo);
-    const distance = Number(
-      Math.sqrt(
-        (ball_2.position.x +
-          ball_2.velocity.x -
-          ball_1.position.x -
-          ball_1.velocity.x) **
-          2 +
-          (ball_2.position.y +
-            ball_2.velocity.y -
-            ball_1.position.y -
-            ball_1.velocity.y) **
-            2
-      ).toFixed(3)
-    );
-    const distanceVector = {
-      x:
-        (ball_2.position.x +
-          ball_2.velocity.x -
-          ball_1.position.x -
-          ball_1.velocity.x) /
-        distance,
-      y:
-        (ball_2.position.y +
-          ball_2.velocity.y -
-          ball_1.position.y -
-          ball_2.velocity.y) /
-        distance,
-    };
+    ball_1.changedDirection = true;
+    ball_2.changedDirection = true;
 
-    const ball_1NewDirection = {
-      x:
-        ball_1.velocity.x -
-        2 * dotProduct(ball_1.velocity, distanceVector) * distanceVector.x,
-      y:
-        ball_1.velocity.y -
-        2 * dotProduct(ball_1.velocity, distanceVector) * distanceVector.y,
-    };
-    const ball_2NewDirection = {
-      x:
-        ball_2.velocity.x -
-        2 * dotProduct(ball_2.velocity, distanceVector) * distanceVector.x,
-      y:
-        ball_2.velocity.y -
-        2 * dotProduct(ball_2.velocity, distanceVector) * distanceVector.y,
-    };
-    const normOne = Math.sqrt(
-      ball_1NewDirection.x ** 2 + ball_1NewDirection.y ** 2
-    );
-    const normTwo = Math.sqrt(
-      ball_2NewDirection.x ** 2 + ball_2NewDirection.y ** 2
-    );
-    ball_1.velocity.x = (ball_1NewDirection.x * ball_1.speed) / normOne;
-    ball_1.velocity.y = (ball_1NewDirection.y * ball_1.speed) / normOne;
-    ball_2.velocity.x = (ball_2NewDirection.x * ball_2.speed) / normTwo;
-    ball_2.velocity.y = (ball_2NewDirection.y * ball_2.speed) / normTwo;
-    // when they are going the same positive direction it just breaks
-    // thats because the velocity is a littlw f=differnet from rounding I guess
+    const v1 = ball_1.velocity;
+    const v2 = ball_2.velocity;
+
+    const x1 = ball_1.position.x;
+    const x2 = ball_2.position.x;
+    const y1 = ball_1.position.y;
+    const y2 = ball_2.position.y;
+    // mass is proportional to radius squared
+    const m1 = ball_1.radius ** 2;
+    const m2 = ball_2.radius ** 2;
+
+    const deltaX = x2 - x1;
+    const deltaY = y2 - y1;
+
+    const distance = Math.sqrt(deltaX ** 2 + deltaY ** 2);
+
+    const normX = deltaX / distance;
+    const normY = deltaY / distance;
+
+    const v1n = dotProduct({ x: normX, y: normY }, v1);
+    const v2n = dotProduct({ x: normX, y: normY }, v2);
+    // we are taking the perpendicular unit vector in respect to the distance vector
+    const v1t = dotProduct({ x: -normY, y: normX }, v1);
+    const v2t = dotProduct({ x: -normY, y: normX }, v2);
+    // tangent line to collision does not change velocity prime is same as v1` but could be derivative as well which can lead to confusion
+    const v1tPrime = v1t;
+    const v2tPrime = v2t;
+    // conservation of momentum in normal line to centers because sum of forces = 0
+    const v1nPrime = (v1n * (m1 - m2) + 2 * m2 * v2n) / (m1 + m2);
+    const v2nPrime = (v2n * (m2 - m1) + 2 * m1 * v1n) / (m1 + m2);
+    // project final x speed over inversed distance unit vector (-normY,normX)
+    //  basically doing (v->) - (2*vn->)
+    v1.x = v1nPrime * normX + v1tPrime * -normY;
+    v1.y = v1nPrime * normY + v1tPrime * normX;
+
+    v2.x = v2nPrime * normX + v2tPrime * -normY;
+    v2.y = v2nPrime * normY + v2tPrime * normX;
+
+    // check if balls overlap and make sure they dont get stuck
+    const overlap = (ball_1.radius + ball_2.radius - distance) / 2;
+    // seocnd term is direction and first one is how much to move based on how much they overlap
+    ball_1.position.x -= (overlap * (x1 - x2)) / distance;
+    ball_1.position.y -= (overlap * (y1 - y2)) / distance;
+    ball_2.position.x += (overlap * (x1 - x2)) / distance;
+    ball_2.position.y += (overlap * (y1 - y2)) / distance;
   }
 
   updateStartPositions() {
@@ -261,11 +243,11 @@ class BallPit {
     }
   }
   update() {
+    this.updateCollisionMatrix();
+    this.updateCollisions();
     for (const ball of this.balls) {
       ball.update();
     }
-    this.updateCollisionMatrix();
-    this.updateCollisions();
   }
 }
 // create balls
